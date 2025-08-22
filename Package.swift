@@ -1,19 +1,14 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.10
 
 import PackageDescription
 
 let package = Package(
     name: "TextSearchKit",
     platforms: [
-        // Relevant platforms.
-        .macOS(.v10_15),
+        .macOS(.v12),
     ],
     products: [
         .library(name: "TextSearchKit", targets: ["TextSearchKit"])
-    ],
-    dependencies: [
-        // It's a good thing to keep things relatively
-        // independent, but add any dependencies here.
     ],
     targets: [
         .target(
@@ -24,7 +19,7 @@ let package = Package(
                 .define("RELEASE", .when(configuration: .release)),
                 .define("SWIFT_PACKAGE")
             ]),
-        .target(
+        .executableTarget(
             name: "textsearch",
             dependencies: ["TextSearchKit"],
             swiftSettings: [
