@@ -4,7 +4,7 @@
 
 import Foundation
 
-public struct TextSearchMatch {
+public struct TextSearchMatch: Sendable {
     public let url: URL
     public let score: Float
     

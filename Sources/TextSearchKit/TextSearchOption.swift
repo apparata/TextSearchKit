@@ -5,7 +5,7 @@
 import Foundation
 import CoreServices
 
-public struct TextSearchOption: OptionSet {
+public struct TextSearchOption: OptionSet, Sendable {
 
     /// Saves search time by suppressing the computation of relevance scores.
     ///

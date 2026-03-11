@@ -1,11 +1,11 @@
-// swift-tools-version:5.10
+// swift-tools-version:6.2
 
 import PackageDescription
 
 let package = Package(
     name: "TextSearchKit",
     platforms: [
-        .macOS(.v12),
+        .macOS(.v14),
     ],
     products: [
         .library(name: "TextSearchKit", targets: ["TextSearchKit"])

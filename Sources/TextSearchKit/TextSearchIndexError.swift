@@ -4,6 +4,6 @@
 
 import Foundation
 
-public enum TextSearchIndexerError: Error {
+public enum TextSearchIndexerError: Error, Sendable {
     case failedToIndex(URL)
 }

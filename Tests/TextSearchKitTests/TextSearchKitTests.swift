@@ -6,7 +6,4 @@ final class TextSearchKitTests: XCTestCase {
         XCTAssertEqual(true, true)
     }
 
-    static var allTests = [
-        ("testExample", testExample),
-    ]
 }
