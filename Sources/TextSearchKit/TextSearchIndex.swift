@@ -64,8 +64,58 @@ public class TextSearchIndex {
                 .takeRetainedValue()
         }
 
+        fileprivate init(creatingAt url: URL, named: String? = nil, stopWords: [String] = defaultStopWords) throws {
+            let properties: [NSObject: AnyObject] = [
+                kSKTermChars: "_" as NSString,
+                kSKMinTermLength: 3 as NSNumber,
+                kSKStopWords: NSSet(array: stopWords as [NSString]),
+                kSKProximityIndexing: kCFBooleanTrue
+            ]
+            guard let skIndex = SKIndexCreateWithURL(
+                url as NSURL,
+                named as NSString?,
+                kSKIndexInverted,
+                properties as CFDictionary
+            )?.takeRetainedValue() else {
+                throw TextSearchIndexerError.failedToCreateIndex(url)
+            }
+            index = skIndex
+        }
+
+        fileprivate init(openingAt url: URL, named: String? = nil, writable: Bool) throws {
+            guard let skIndex = SKIndexOpenWithURL(
+                url as NSURL,
+                named as NSString?,
+                writable
+            )?.takeRetainedValue() else {
+                throw TextSearchIndexerError.failedToOpenIndex(url)
+            }
+            index = skIndex
+        }
+
         fileprivate func flush() {
             SKIndexFlush(index)
+        }
+
+        fileprivate func close() {
+            SKIndexClose(index)
+        }
+
+        public func documentCount() -> Int {
+            SKIndexGetDocumentCount(index)
+        }
+
+        public func documentState(for url: URL) -> TextSearchDocumentState {
+            let unmanagedDocument = SKDocumentCreateWithURL(url as NSURL)
+            guard let document = unmanagedDocument?.takeRetainedValue() else {
+                return .notIndexed
+            }
+            return TextSearchDocumentState(SKIndexGetDocumentState(index, document))
+        }
+
+        @discardableResult
+        public func compact() -> Bool {
+            SKIndexCompact(index)
         }
     }
 
@@ -79,6 +129,22 @@ public class TextSearchIndex {
         func perform(_ actions: @Sendable (Index) throws -> Void) rethrows {
             try actions(index)
             index.flush()
+        }
+
+        func close() {
+            index.close()
+        }
+
+        func documentCount() -> Int {
+            index.documentCount()
+        }
+
+        func documentState(for url: URL) -> TextSearchDocumentState {
+            index.documentState(for: url)
+        }
+
+        func compact() -> Bool {
+            index.compact()
         }
 
         func search(for string: String,
@@ -125,6 +191,16 @@ public class TextSearchIndex {
         indexActor = IndexActor(index: index)
     }
 
+    public init(creatingAt url: URL, named: String? = nil, stopWords: [String] = defaultStopWords) throws {
+        let index = try Index(creatingAt: url, named: named, stopWords: stopWords)
+        indexActor = IndexActor(index: index)
+    }
+
+    public init(openingAt url: URL, named: String? = nil, writable: Bool = true) throws {
+        let index = try Index(openingAt: url, named: named, writable: writable)
+        indexActor = IndexActor(index: index)
+    }
+
     public func index(_ actions: @Sendable (Index) throws -> Void) async rethrows {
         try await indexActor.perform(actions)
     }
@@ -141,11 +217,34 @@ public class TextSearchIndex {
         }
     }
 
+    public func removeDocument(url: URL) async throws {
+        try await index { index in
+            try index.removeDocument(url: url)
+        }
+    }
+
     public func search(for string: String,
                        options: TextSearchOption = .defaultOptions,
                        limit: Int,
                        time: TimeInterval) async -> [TextSearchMatch] {
         await indexActor.search(for: string, options: options, limit: limit, time: time)
+    }
+
+    public func close() async {
+        await indexActor.close()
+    }
+
+    public func documentCount() async -> Int {
+        await indexActor.documentCount()
+    }
+
+    public func documentState(for url: URL) async -> TextSearchDocumentState {
+        await indexActor.documentState(for: url)
+    }
+
+    @discardableResult
+    public func compact() async -> Bool {
+        await indexActor.compact()
     }
 }
 
@@ -171,6 +270,17 @@ extension TextSearchIndex.Index: TextSearchIndexer {
         let success = SKIndexAddDocumentWithText(index, document, content as NSString, true)
         guard success else {
             throw TextSearchIndexerError.failedToIndex(url)
+        }
+    }
+
+    public func removeDocument(url: URL) throws {
+        let unmanagedDocument = SKDocumentCreateWithURL(url as NSURL)
+        guard let document = unmanagedDocument?.takeRetainedValue() else {
+            throw TextSearchIndexerError.failedToRemove(url)
+        }
+        let success = SKIndexRemoveDocument(index, document)
+        guard success else {
+            throw TextSearchIndexerError.failedToRemove(url)
         }
     }
 }

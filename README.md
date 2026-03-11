@@ -51,6 +51,41 @@ The full Search Kit query syntax is supported:
 - **Phrases:** `"exact phrase"`
 - **Grouping:** Parentheses for logical grouping
 
+### Persistent Index
+
+Create a file-backed index that persists across app launches:
+
+```swift
+// Create a new index on disk
+let searchIndex = try TextSearchIndex(creatingAt: indexFileURL)
+
+// Open an existing index
+let searchIndex = try TextSearchIndex(openingAt: indexFileURL)
+
+// Open read-only
+let searchIndex = try TextSearchIndex(openingAt: indexFileURL, writable: false)
+
+// Close when done
+await searchIndex.close()
+```
+
+### Document State & Count
+
+```swift
+let count = await searchIndex.documentCount()
+
+let state = await searchIndex.documentState(for: documentURL)
+// .notIndexed, .indexed, .addPending, .deletePending
+```
+
+### Compaction
+
+Reclaim disk space and optimize the index after removing documents:
+
+```swift
+await searchIndex.compact()
+```
+
 ### Search Options
 
 ```swift
